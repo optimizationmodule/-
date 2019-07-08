@@ -15,8 +15,9 @@
 #import "SMFeedModel.h"
 #import "SMLagMonitor.h"
 #import "SMCallTrace.h"
+#import <Matrix.h>
 
-@interface AppDelegate ()
+@interface AppDelegate ()<MatrixPluginListenerDelegate>
 
 @end
 
@@ -27,6 +28,7 @@
     //这里是做卡顿监测
 //    [[SMLagMonitor shareInstance] beginMonitor];
     [SMCallTrace start];
+    [self setupMatrix];
     self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
     //首页
     SMRootViewController *rootVC = [[SMRootViewController alloc] init];
@@ -68,6 +70,24 @@
     return YES;
 }
 
+- (void)setupMatrix
+{
+    Matrix *matrix = [Matrix sharedInstance];
+    MatrixBuilder *curBuilder = [[MatrixBuilder alloc] init];
+    curBuilder.pluginListener = self; // pluginListener 回调 plugin 的相关事件
+    
+    WCCrashBlockMonitorPlugin *crashBlockPlugin = [[WCCrashBlockMonitorPlugin alloc] init];
+    [curBuilder addPlugin:crashBlockPlugin]; // 添加卡顿和崩溃监控
+    
+    WCMemoryStatPlugin *memoryStatPlugin = [[WCMemoryStatPlugin alloc] init];
+    [curBuilder addPlugin:memoryStatPlugin]; // 添加内存监控功能
+    
+    [matrix addMatrixBuilder:curBuilder];
+    
+    [crashBlockPlugin start]; // 开启卡顿和崩溃监控
+    [memoryStatPlugin start];
+}
+
 - (UINavigationController *)styleNavigationControllerWithRootController:(UIViewController *)vc {
     UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:vc];
     nav.navigationBar.tintColor = [SMStyle colorPaperBlack];
@@ -87,6 +107,29 @@
 - (void)applicationDidEnterBackground:(UIApplication *)application
 {
     [SMCallTrace stopSaveAndClean];
+}
+
+#pragma Mark plugin delegate
+
+- (void)onInit:(id<MatrixPluginProtocol>)plugin
+{
+    NSLog(@"Matrix init:%@",plugin);
+}
+- (void)onStart:(id<MatrixPluginProtocol>)plugin
+{
+    NSLog(@"Matrix start:%@",plugin);
+}
+- (void)onStop:(id<MatrixPluginProtocol>)plugin
+{
+    NSLog(@"Matrix stop:%@",plugin);
+}
+- (void)onDestroy:(id<MatrixPluginProtocol>)plugin
+{
+    NSLog(@"Matrix destory:%@",plugin);
+}
+- (void)onReportIssue:(MatrixIssue *)issue
+{
+    NSLog(@"Matrix issue:%@",issue);
 }
 
 @end
